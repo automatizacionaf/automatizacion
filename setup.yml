@@ -1,0 +1,896 @@
+AWSTemplateFormatVersion: "2010-09-09" 
+Transform: AWS::SecretsManager-2020-07-23
+Description: > 
+  AJFR Setup for Automatizacion
+
+Conditions:
+  CreateResources:
+    !And [ !Not [ !Equals [ "AJFR_ENV", "prod" ] ], !Equals [ "AJFR_CREATE_RESOURCES", "true" ] ]
+  # CertOrProd:
+  #   !Or [ !Equals [ !Ref Env, "cert"], !Equals [ !Ref Env, "prod" ] ]
+  
+  # NotCertOrProd:
+  #   !Not [ Condition: CertOrProd ]
+
+  # CertOrProdAndForceCreation:
+  #   !And [ Condition: CertOrProd, !Equals [ !Ref ForceCreation, "true" ]  ]
+    
+Parameters:
+  ForceCreation:
+    Type: String
+    Default: "false"
+
+Resources:
+  ##
+  ## Create Sns Topic
+  ##
+
+#  AppSNSTopic:
+#    Type: AWS::SNS::Topic
+#    Properties:
+#      TopicName: AJFR_ENT-AJFR_APP-AJFR_ENV-sns-s3event
+#      FifoTopic: false
+#      Subscription:
+#      - Endpoint: AJFR_SNS_EMAIL_LIST_SUBSCRIPTION
+#        Protocol: email
+#      
+#      Tags:
+#        - Key: Ent
+#          Value: AJFR_ENT     
+#        - Key: App
+#          Value: AJFR_APP
+#        - Key: Env
+#          Value: AJFR_ENV
+#
+  ## 
+  ## Create the S3 Data App Bucket 
+  ##  
+  DataAppS3bucket:
+    Condition: CreateResources
+    DependsOn: AppSNSTopic
+    Type: AWS::S3::Bucket 
+    Properties: 
+      BucketName: AJFR_ENT-AJFR_APPAJFR_DATA_APP_S3_PREFIX-AJFR_DATA_APP_S3_BUCKETAJFR_DATA_APP_S3_POSTFIX
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+      # NotificationConfiguration:
+      #   TopicConfigurations:
+      #     - Event: s3:ObjectCreated:*
+      #       Topic: !Ref AppSNSTopic
+      #       Filter:
+      #         S3Key:
+      #           Rules:
+      #             - Name: prefix
+      #               Value: AJFR_DATA_APP_S3_SNS_FILTER_PATH
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
+
+  # BucketToSNSPermission:
+  #   Type: AWS::SNS::TopicPolicy
+  #   Properties:
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: s3.amazonaws.com
+  #           Action: sns:Publish
+  #           Resource: !Ref AppSNSTopic
+  #           Condition:
+  #             ArnEquals:
+  #               aws:SourceArn: !GetAtt DataAppS3bucket.Arn
+  #     Topics:
+  #       - !Ref AppSNSTopic
+
+  ## 
+  ## Create the S3 SAM deploy Bucket 
+  ##  
+  SamDeployS3bucket:
+    Type: AWS::S3::Bucket 
+    Properties: 
+      BucketName: AJFR_ENT-AJFR_APP-AJFR_ENV-sam-deploy
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
+
+  ##
+  ## Create Dynamo Tables
+  ##
+
+  TableTemporaryPayments:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: AJFR_DYNAMODB_TABLE_NAME_PREFIXAJFR_DYNAMODB_TABLE_NAME_TEMPORARYPAYMENTS
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: organization_code
+          AttributeType: S
+        - AttributeName: payment_id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: organization_code
+          KeyType: HASH
+        - AttributeName: payment_id
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
+
+  TableSuccessfulInvoice:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      TableName: AJFR_DYNAMODB_TABLE_NAME_PREFIXAJFR_DYNAMODB_TABLE_NAME_SUCCESSFULINVOICE
+      AttributeDefinitions:
+        - AttributeName: period
+          AttributeType: N
+        - AttributeName: payment_id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: period
+          KeyType: HASH
+        - AttributeName: payment_id
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
+
+  ##
+  ## Create Sqs Queue
+  ##
+#  SendPayments: 
+#    Type: AWS::SQS::Queue
+#    Properties:
+#      FifoQueue: true 
+#      QueueName: AJFR_ENT-AJFR_APP-AJFR_ENV-AJFR_SQS_SEND_PAYMENTS
+#      VisibilityTimeout: 300
+#      ContentBasedDeduplication: true
+#
+#  PaymentTimeout: 
+#    Type: AWS::SQS::Queue
+#    Properties:
+#      FifoQueue: true 
+#      QueueName: AJFR_ENT-AJFR_APP-AJFR_ENV-AJFR_SQS_PAYMENTS_TIMEOUT
+#      VisibilityTimeout: 300
+#      ContentBasedDeduplication: true
+
+## Create SSM Parameter
+  InvoiceEmiterData:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /AJFR_ENT-AJFR_APP-AJFR_ENV/InvoiceEmiter
+      Type: String
+      Description: SSM Parameter for invoice emiter data.
+      Value: 
+        !Sub |
+          { 
+            rutEmisorAJFR : "76574879-8",
+          }
+
+##
+## Create Security Group
+## 
+
+##
+##  Sumologic Secret 
+##
+
+#  SumologicSecret:
+#    Type: 'AWS::SecretsManager::Secret'
+#    Properties:
+#      Name: AJFR_ENT-AJFR_APP-AJFR_ENV-secret-sumologic
+#      Description: Sumo Logic Secret
+#      SecretString: !Sub '{"host":"AJFR_SUMOLOGIC_HOST","path":"AJFR_SUMOLOGIC_PATH"}'
+#      Tags:
+#        - Key: Ent
+#          Value: AJFR_ENT     
+#        - Key: App
+#          Value: AJFR_APP
+#        - Key: Env
+#          Value: AJFR_ENV
+
+##
+## ODS Secret
+##
+
+#  OdsSecret:
+#    Type: 'AWS::SecretsManager::Secret'
+#    Properties:
+#      Name: AJFR_ENT-AJFR_APP-AJFR_ENV-secret-ods
+#      Description: Ods Secret
+#      SecretString: 
+#        !Sub | 
+#            {
+#              "mssqlODSUser":"AJFR_MSSQLODSUSER",
+#              "mssqlODSPassword":"AJFR_MSSQLODSPASSWORD",
+#            }
+#      Tags:
+#        - Key: Ent
+#          Value: AJFR_ENT     
+#        - Key: App
+#          Value: AJFR_APP
+#        - Key: Env
+#          Value: AJFR_ENV
+
+  #
+  # Create Role for state machine invocation from CloudWatch Rule
+  #
+
+#  ScheduledEventRole:
+#    Type: AWS::IAM::Role
+#    Properties:
+#      RoleName: AJFR_ENT-AJFR_APP-AJFR_ENV-scheduled-event-role
+#      AssumeRolePolicyDocument:
+#        Version: "2012-10-17"
+#        Statement:
+#          -
+#            Effect: "Allow"
+#            Principal:
+#              Service:
+#                  - Fn::Sub: "events.amazonaws.com"
+#            Action:
+#              - "sts:AssumeRole"
+#      Policies:
+#        -
+#          PolicyName: StateMachineExecutionPolicy
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#              -
+#                Effect: "Allow"
+#                Action: "states:StartExecution"
+#                Resource: !Sub arn:aws:states:*:*:stateMachine:AJFR_ENT-AJFR_APP-AJFR_ENV-*
+#      Tags:
+#        - Key: Ent
+#          Value: AJFR_ENT     
+#        - Key: App
+#          Value: AJFR_APP
+#        - Key: Env
+#          Value: AJFR_ENV
+
+##
+## Navitarie Secret
+##
+
+  ##
+  ## Create Lambda Runtime Role
+  ## 
+  RuntimeLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-runtime-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "sts:AssumeRole"
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-secrets-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "secretsmanager:GetSecretValue"
+                Resource: !Sub "arn:aws:secretsmanager:*:*:secret:AJFR_ENT-AJFR_APP-AJFR_ENV-secret-*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-sfn-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "states:StartExecution"
+                Resource: !Sub "arn:aws:states:*:*:stateMachine:AJFR_ENT-AJFR_APP-AJFR_ENV-sm-*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-cloudwatch-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "cloudwatch:DeleteAlarms"
+                  - "cloudwatch:DescribeAlarmHistory"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:DescribeAlarmsForMetric"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:ListMetrics"
+                  - "cloudwatch:PutMetricAlarm"
+                  - "cloudwatch:GetMetricData"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-datapipe-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "datapipeline:ActivatePipeline"
+                  - "datapipeline:CreatePipeline"
+                  - "datapipeline:DeletePipeline"
+                  - "datapipeline:DescribeObjects"
+                  - "datapipeline:DescribePipelines"
+                  - "datapipeline:GetPipelineDefinition"
+                  - "datapipeline:ListPipelines"
+                  - "datapipeline:PutPipelineDefinition"
+                  - "datapipeline:QueryObjects"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-codepipe-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "codepipeline:PutJobSuccessResult"
+                  - "codepipeline:PutJobFailureResult"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-codebuild-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "tag:GetResources"
+                  - "codebuild:*"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-lambda-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:CreateFunction"
+                  - "lambda:ListFunctions"
+                  - "lambda:ListEventSourceMappings"
+                  - "lambda:CreateEventSourceMapping"
+                  - "lambda:DeleteEventSourceMapping"
+                  - "lambda:GetFunctionConfiguration"
+                  - "lambda:DeleteFunction"
+                  - 'lambda:InvokeFunction'
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-resource-groups-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "resource-groups:ListGroups"
+                  - "resource-groups:ListGroupResources"
+                  - "resource-groups:GetGroup"
+                  - "resource-groups:GetGroupQuery"
+                  - "resource-groups:DeleteGroup"
+                  - "resource-groups:CreateGroup"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-kinesis-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "kinesis:ListStreams"
+                  - "kinesis:DescribeStream"
+                  - "kinesis:DescribeStreamSummary"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-s3-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:CreateBucket"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-app-autoscaling-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "application-autoscaling:DeleteScalingPolicy"
+                  - "application-autoscaling:DeregisterScalableTarget"
+                  - "application-autoscaling:DescribeScalableTargets"
+                  - "application-autoscaling:DescribeScalingActivities"
+                  - "application-autoscaling:DescribeScalingPolicies"
+                  - "application-autoscaling:PutScalingPolicy"
+                  - "application-autoscaling:RegisterScalableTarget"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-dax-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dax:*"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-kms-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "kms:DescribeKey"
+                  - "kms:ListAliases"
+                Resource: "*"
+#
+#        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-sns-policy
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#              - Effect: Allow
+#                Action:
+#                  - "sns:CreateTopic"
+#                  - "sns:DeleteTopic"
+#                  - "sns:ListSubscriptions"
+#                  - "sns:ListSubscriptionsByTopic"
+#                  - "sns:ListTopics"
+#                  - "sns:Subscribe"
+#                  - "sns:Unsubscribe"
+#                  - "sns:SetTopicAttributes"
+#                  - "SNS:Publish"
+#                Resource: "*"
+#
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-sqs-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'sqs:ListQueues'
+                  - 'sqs:CreateQueue'
+                  - 'sqs:DeleteQueue'
+                  - 'sqs:GetQueueAttributes'
+                  - 'sqs:SendMessage'
+                  - 'sqs:DeleteMessage'
+                  - 'sqs:ReceiveMessage'
+                Resource: "*"
+
+#        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-ssm-policy
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#              - Effect: Allow
+#                Action:
+#                  - 'ssm:GetParameter'
+#                  - 'ssm:PutParameter'
+#                  - 'ssm:AddTagsToResource'
+#                Resource: "*"
+#
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-dynamo-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:Query'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:DeleteItem'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:BatchGetItem'
+                  - "dynamodb:DescribeStream"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
+                  - "dynamodb:ListStreams"
+                Resource: "*"
+        # - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-rds-policy
+        #   PolicyDocument:
+        #     Version: "2012-10-17"
+        #     Statement:
+        #       - Effect: Allow
+        #         Action:
+        #           - 'rds-data:ExecuteStatement'
+        #         Resource: AJFR_MYSQL_ARN
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-cloudformation-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:CreateChangeSet"
+                  - "cloudformation:DeleteChangeSet"
+                  - "cloudformation:DescribeChangeSet"
+                  - "cloudformation:ExecuteChangeSet"
+                  - "cloudformation:SetStackPolicy"
+                  - "cloudformation:ValidateTemplate"
+                  - "cloudformation:DescribeStackResource"
+                  - "cloudformation:DescribeStackEvents"
+                  - "cloudformation:ListStackResources"
+                  - "cloudformation:GetTemplateSummary"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-ec2-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "ec2:CreateNetworkInterface"
+                  - "ec2:DescribeDhcpOptions"
+                  - "ec2:DescribeNetworkInterfaces"
+                  - "ec2:DeleteNetworkInterface"
+                  - "ec2:DescribeSubnets"
+                  - "ec2:DescribeSecurityGroups"
+                  - "ec2:DescribeVpcs"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "ec2:CreateNetworkInterfacePermission"
+                Resource: !Sub arn:aws:ec2:us-east-2:${AWS::AccountId}:network-interface/*
+                Condition:
+                  StringEquals:
+                    ec2:Subnet:
+                      - !Sub arn:aws:ec2:us-east-2:${AWS::AccountId}:subnet/*
+                    ec2:AuthorizedService: "codebuild.amazonaws.com"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-logs-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-iam-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "iam:GetRole"
+                  - "iam:PassRole"
+                  - "iam:ListRoles"
+                  - "iam:PutRolePolicy"
+                  - "iam:GetRole"
+                Resource: "*"  
+      
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-lambda-tag-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "tag:GetResources"
+                Resource: "*"                
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
+
+  ## 
+  ## Create the Pipeline Role
+  ##
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AJFR_ENT-AJFR_APP-AJFR_ENV-pipeline-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "sts:AssumeRole"
+            Principal:
+              Service: 
+                - codebuild.amazonaws.com
+                - codepipeline.amazonaws.com
+      Policies:
+        - PolicyName: AJFR_ENT-AJFR_APP-AJFR_ENV-pipeline-Policies
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "events:DescribeRule"
+                  - "events:PutRule"
+                  - "events:PutTargets"
+                  - "events:RemoveTargets"
+                  - "events:DeleteRule"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:GetLogEvents"
+                  - "states:UpdateStateMachine"
+                  - "states:CreateStateMachine"
+                  - "states:TagResource"
+                  - "states:DescribeStateMachine"
+                  - "states:DeleteStateMachine"
+                  - "s3:CreateBucket"
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:PutBucketNotification"
+                  - "lambda:AddPermission"
+                  - "lambda:CreateFunction"
+                  - "lambda:DeleteFunction"
+                  - "lambda:GetFunction"
+                  - "lambda:GetFunctionConfiguration"
+                  - "lambda:PutFunctionConcurrency"
+                  - "lambda:RemovePermission"
+                  - "lambda:UpdateFunctionCode"
+                  - "lambda:UpdateFunctionConfiguration"
+                  - "lambda:InvokeFunction"
+                  - "lambda:CreateEventSourceMapping"
+                  - "lambda:GetEventSourceMapping"
+                  - "execute-api:Invoke"
+                  - "apigateway:*"
+                  - "ssm:*"
+                  - "codepipeline:PutJobSuccessResult"
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:CreateChangeSet"
+                  - "cloudformation:DeleteChangeSet"
+                  - "cloudformation:DescribeChangeSet"
+                  - "cloudformation:ExecuteChangeSet"
+                  - "cloudformation:SetStackPolicy"
+                  - "cloudformation:ValidateTemplate"
+                  - "cloudformation:DescribeStackResource"
+                  - "cloudformation:DescribeStackEvents"
+                  - "cloudformation:ListStackResources"
+                  - "cloudformation:GetTemplateSummary"
+                  - "iam:PassRole"
+                  - "iam:GetRolePolicy"
+                  - "iam:PutRolePolicy"
+                  - "iam:GetRole"
+                  - "iam:ListRoles"
+                  - "iam:CreateRole"
+                  - "iam:DeleteRolePolicy"
+                  - "codepipeline:PutJobFailureResult"
+                  - "codebuild:*"
+                  - "ec2:CreateNetworkInterface"
+                  - "ec2:DescribeDhcpOptions"
+                  - "ec2:DescribeNetworkInterfaces"
+                  - "ec2:DeleteNetworkInterface"
+                  - "ec2:DescribeSubnets"
+                  - "ec2:DescribeSecurityGroups"
+                  - "ec2:DescribeVpcs"
+                  - 'dynamodb:PutItem'
+                  - "dynamodb:CreateTable"
+                  - "dynamodb:DescribeStream"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
+                  - "dynamodb:ListStreams"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
+                  - "dynamodb:BatchGetItem"
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:DeleteTable"
+                  - "sqs:CreateQueue"
+                  - "sqs:ListQueues"
+                  - 'sqs:DeleteQueue'
+                  - 'sqs:GetQueueAttributes'
+                  - 'sqs:SendMessage'
+                  - 'sqs:DeleteMessage'
+                  - 'sqs:ReceiveMessage'
+                  - "resource-groups:ListGroups"
+                  - "resource-groups:ListGroupResources"
+                  - "resource-groups:GetGroup"
+                  - "resource-groups:GetGroupQuery"
+                  - "resource-groups:DeleteGroup"
+                  - "resource-groups:CreateGroup"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "ec2:CreateNetworkInterfacePermission"
+                Resource: !Sub arn:aws:ec2:*:*:network-interface/*
+                Condition:
+                  StringEquals:
+                    ec2:Subnet:
+                      - !Sub arn:aws:ec2:*:*:subnet/*
+                    ec2:AuthorizedService: "codebuild.amazonaws.com"
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
+
+  ##
+  ## Crete The Pipeline 
+  ##
+  AutomatedPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: AJFR_ENT-AJFR_APP-AJFR_ENV-pipeline
+      ArtifactStore:
+        Type: S3
+        Location: !Ref SamDeployS3bucket
+      RoleArn: !GetAtt PipelineRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                PollForSourceChanges: true
+                Owner: AJFR_GIT_ORGANIZATION
+                Repo: AJFR_GIT_REPOSITORY
+                Branch: AJFR_GIT_BRANCH
+                OAuthToken: AJFR_GIT_TOKEN
+              OutputArtifacts:
+                - Name: AJFR_ENT-AJFR_APP-AJFR_ENV-checkout-artifact
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: BuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref AutomatedBuildProject
+              RunOrder: 1
+              InputArtifacts:
+                - Name: AJFR_ENT-AJFR_APP-AJFR_ENV-checkout-artifact
+              OutputArtifacts:
+                - Name: BuildOutput
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
+
+  #
+  # Create de Build Project for Pipeline
+  #
+
+  AutomatedBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: AJFR_ENT-AJFR_APP-AJFR_ENV-build-project
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        EnvironmentVariables:
+          #
+          # WARNING: the name of BUILD_ variables can not be cantained on othen name of build variables
+          # Wrong : BUILD_APP and BUILD_APP_XXXX 
+          #
+          - Name: BUILD_ENT
+            Value: AJFR_ENT  
+          - Name: BUILD_APP
+            Value: AJFR_APP
+          - Name: BUILD_ENV
+            Value: AJFR_ENV
+          - Name: BUILD_ACCOUNT
+            Value: !Ref AWS::AccountId
+          - Name: BUILD_REGION
+            Value: !Ref AWS::Region
+          - Name: FORCE_DELETE_DEPLOYMMENT_STACK
+            Value: AJFR_FORCE_DELETE_DEPLOYMMENT_STACK
+          - Name: BUILD_RUNTIME_LAMBDA_ROLE
+            Value: !GetAtt RuntimeLambdaRole.Arn
+          - Name: BUILD_DEPLOYMENT_S3_BUCKET
+            Value: !Ref SamDeployS3bucket
+          - Name: BUILD_SCHEDULE_SF_EVENT_ROLE
+            Value: !GetAtt ScheduledEventRole.Arn
+          - Name: BUILD_DATA_APP_S3_BUCKET
+            Value: !Ref DataAppS3bucket
+          
+          ## S3 EVENT TO SNS FILTER PATH
+          - Name: BUILD_DATA_APP_S3_SNS_FILTER_PATH
+            Value: AJFR_DATA_APP_S3_SNS_FILTER_PATH
+
+          #### TABLAS DYNAMO
+          - Name: BUILD_DYNAMO_TEMPORAY_PAYMENTS
+            Value: !Ref TableTemporaryPayments
+#          - Name: BUILD_DYNAMO_SUCCESSFUL_INOVICE
+#            Value: !Ref TableSuccessfulInvoice
+#          - Name: BUILD_DYNAMO_UNSUCCESSFUL_INOVICE
+#            Value: !Ref TableUnSuccessfulInvoice
+
+
+#          - Name: BUILD_SSM_INVOICE_EMITER
+#            Value: !Ref InvoiceEmiterData
+#          
+#          - Name: BUILD_SSM_BLUELINE_SOAP_DATA
+#            Value: !Ref BluelineSoapData
+#
+#          - Name: BUILD_ODS_SECRET_ARN
+#            Value: !Ref OdsSecret
+#
+#          - Name: BUILD_SNS_APP_TOPIC_ARN
+#            Value: !Ref AppSNSTopic
+#
+#          # - Name: BUILD_NAVITAIRE_SECRET_ARN
+#          #   Value: !Ref NavitaireSecret
+#
+#          - Name: BUILD_SQS_SEND_PAYMENTS_ENDPOINT
+#            Value: !Ref SendPayments
+#          - Name: BUILD_SQS_SEND_PAYMENTS_ARN
+#            Value: !GetAtt SendPayments.Arn
+#          - Name: BUILD_SQS_PAYMENTS_TIMEOUT_ENDPOINT
+#            Value: !Ref PaymentTimeout
+#          - Name: BUILD_SQS_PAYMENTS_TIMEOUT_ARN
+#            Value: !GetAtt PaymentTimeout.Arn
+
+          - Name: BUILD_LAMBDA_NAME_SCHEDULEINVOICE
+            Value: AJFR_LAMBDA_NAME_SCHEDULEINVOICE
+#          - Name: BUILD_LAMBDA_NAME_GETPAYMENTTOINVOICE
+#            Value: AJFR_LAMBDA_NAME_GETPAYMENTTOINVOICE
+#          - Name: BUILD_LAMBDA_NAME_GETPAYMENTTOTIMEOUT
+#            Value: AJFR_LAMBDA_NAME_GETPAYMENTTOTIMEOUT
+#          - Name: BUILD_LAMBDA_NAME_XMLINVOICE
+#            Value: AJFR_LAMBDA_NAME_XMLINVOICE
+#          - Name: BUILD_LAMBDA_ARN_DYNAMODB_EXPORT
+#            Value: AJFR_LAMBDA_ARN_DYNAMODB_EXPORT
+#          - Name: BUILD_LAMBDA_NAME_DYNAMODB_EXPORT
+#            Value: AJFR_LAMBDA_NAME_DYNAMODB_EXPORT
+#
+      ServiceRole: !GetAtt PipelineRole.Arn
+      Source: 
+        Type: CODEPIPELINE 
+        BuildSpec: buildspect.yml
+      Tags:
+        - Key: Ent
+          Value: AJFR_ENT     
+        - Key: App
+          Value: AJFR_APP
+        - Key: Env
+          Value: AJFR_ENV
