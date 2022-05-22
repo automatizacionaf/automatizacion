@@ -2,7 +2,7 @@
 #set -eu
 AJFR_ENV="${1}"
 AJFR_GIT_TOKEN="${2}"
-echo "$AJFR_ENV"
+
 if [ "$#" -lt 2 ]; then 
     echo "Usage : "
     echo "  Opt 1) setup-stack Environment GitHut-Env-Token "
@@ -30,7 +30,7 @@ if [ "$#" -eq 2 ]; then
     fi
 fi 
 if [ "$#" -eq 3 ]; then
-    if [ "${1}" == "legacy" ] || [ "${1}" == "dev" ] || [ "${1}" == "cert" ] || [ "${1}" == "prod" ]; then
+    if [ "${1}" == "legacy" ] || [ "${1}" != "dev" ] || [ "${1}" == "cert" ] || [ "${1}" == "prod" ]; then
         echo "Your Environment must be diferent of 'dev' or 'cert' or 'prod' or 'legacy' and start with 'dev-' or 'cert-':"
         echo "  setup-stack needs three arguments. Usage: "
         echo "      setup-stack Your-Environment Your-GitHut-Env-Token Your-GitHub-Branch"
@@ -41,7 +41,7 @@ if [ "$#" -eq 3 ]; then
     AJFR_ENV_START=${AJFR_ENV:0:4}
     AJFR_GIT_BRANCH_START=${AJFR_GIT_BRANCH:0:4}
 
-    if [ "$AJFR_ENV_START" == "dev-" ] && [ "$AJFR_GIT_BRANCH_START" != "dev-" ]; then
+    if [ "$AJFR_ENV_START" == "dev" ] && [ "$AJFR_GIT_BRANCH_START" != "dev" ]; then
         echo "Your Branch must be start with 'dev-' :"
         echo "  setup-stack needs three arguments. Usage: "
         echo "      setup-stack Your-Environment Your-GitHut-Env-Token Your-GitHub-Branch"
@@ -117,7 +117,7 @@ do
         sed -i '' "s;$varname;${!varname};g" setup_tmp.yml
     fi
 done
-exit 1
+
 if [ "$AJFR_STACK_INFO" == "" ]; then
     echo "Creando Stack $AJFR_SETUP_STACK_NAME"
     echo "Archivo para deploy: setup.yml"

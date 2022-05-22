@@ -1,9 +1,9 @@
-AWSReservedSSO_DeveloperDev_97ddf84b610b91a9:~/environment $  ./stack-setup.sh dev-tst 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 dev-tst
-# 
+#AWSReservedSSO_DeveloperDev_97ddf84b610b91a9:~/environment $  ./stack-setup.sh dev-tst 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 dev-tst
+# ./stack-setup.sh dev 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 dev
 # Definicion de nuestra Alicacion
 #
 export AJFR_FORCE_DELETE_DEPLOYMMENT_STACK="FALSE"
-export AJFR_ENT="AJFR"
+export AJFR_ENT="ajfr"
 export AJFR_APP="scraping"
 export AJFR_PROVIDER="af"
 export AJFR_BUSINESS_UNIT="automatizacion"
@@ -17,13 +17,13 @@ export AJFR_GIT_REPOSITORY="automatizaacion"
 #export AJFR_LAMBDA_VPC_ID="ID DE LA VPC DONDE CORRERAN LAS LAMBDAS"
 #export AJFR_LAMBDA_SUBNET_ID_LIST="RELLENAR CON LISTA DE ID DE SUBNETS SEPARADOS POR ; SIN ESPACIOS, QUE USARAN LAS LAMBDAS"
 
-export AJFR_LAMBDA_VPC_ID="vpc-00b33a81d1f6cee7e"
+export AJFR_LAMBDA_VPC_ID="vpc-0544299c47dfd3954"
 
-export AJFR_LAMBDA_SUBNET_ID_LIST="subnet-0286a53da6c70c1b6,subnet-0d77a64d56e217ad9,subnet-034e48dfb99c95f22"
+export AJFR_LAMBDA_SUBNET_ID_LIST="subnet-0de6b4852fb659e75,subnet-099e874ba376762a0,subnet-04708bcdbfe4cf8bd"
 
 # SNS
 
-export AJFR_SNS_EMAIL_LIST_SUBSCRIPTION="consolidated-invoice-result@jetsmart.com"
+#export AJFR_SNS_EMAIL_LIST_SUBSCRIPTION="consolidated-invoice-result@jetsmart.com"
 
 ############
 ##
@@ -75,7 +75,7 @@ export AJFR_CREATE_RESOURCES="true"
 export AJFR_DATA_APP_S3_POSTFIX=""
 export AJFR_DATA_APP_S3_PREFIX="-${AJFR_ENV}"
 export AJFR_DATA_APP_S3_BUCKET="storage" 
-export AJFR_DATA_APP_S3_SNS_FILTER_PATH="DynamodbCsvExported/"
+#export AJFR_DATA_APP_S3_SNS_FILTER_PATH="DynamodbCsvExported/"
 export AJFR_DATA_APP_S3_TEMP_BUCKET="temp" 
 export AJFR_DATA_APP_S3_SAM_DEPLOY_BUCKET="sam-deploy"
 #Crear S3 para saveCSVtoS3 y savePDFtoS3

@@ -47,7 +47,7 @@ Resources:
   ##  
   DataAppS3bucket:
     Condition: CreateResources
-    DependsOn: AppSNSTopic
+#    DependsOn: AppSNSTopic
     Type: AWS::S3::Bucket 
     Properties: 
       BucketName: AJFR_ENT-AJFR_APPAJFR_DATA_APP_S3_PREFIX-AJFR_DATA_APP_S3_BUCKETAJFR_DATA_APP_S3_POSTFIX
@@ -828,14 +828,14 @@ Resources:
             Value: !GetAtt RuntimeLambdaRole.Arn
           - Name: BUILD_DEPLOYMENT_S3_BUCKET
             Value: !Ref SamDeployS3bucket
-          - Name: BUILD_SCHEDULE_SF_EVENT_ROLE
-            Value: !GetAtt ScheduledEventRole.Arn
+#          - Name: BUILD_SCHEDULE_SF_EVENT_ROLE
+#            Value: !GetAtt ScheduledEventRole.Arn
           - Name: BUILD_DATA_APP_S3_BUCKET
             Value: !Ref DataAppS3bucket
           
           ## S3 EVENT TO SNS FILTER PATH
-          - Name: BUILD_DATA_APP_S3_SNS_FILTER_PATH
-            Value: AJFR_DATA_APP_S3_SNS_FILTER_PATH
+#          - Name: BUILD_DATA_APP_S3_SNS_FILTER_PATH
+#            Value: AJFR_DATA_APP_S3_SNS_FILTER_PATH
 
           #### TABLAS DYNAMO
           - Name: BUILD_DYNAMO_TEMPORAY_PAYMENTS

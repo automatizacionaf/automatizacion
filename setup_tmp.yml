@@ -5,7 +5,7 @@ Description: >
 
 Conditions:
   CreateResources:
-    !And [ !Not [ !Equals [ "dev-tst", "prod" ] ], !Equals [ "AJFR_CREATE_RESOURCES", "true" ] ]
+    !And [ !Not [ !Equals [ "dev", "prod" ] ], !Equals [ "true", "true" ] ]
   # CertOrProd:
   #   !Or [ !Equals [ !Ref Env, "cert"], !Equals [ !Ref Env, "prod" ] ]
   
@@ -28,7 +28,7 @@ Resources:
 #  AppSNSTopic:
 #    Type: AWS::SNS::Topic
 #    Properties:
-#      TopicName: AJFR_ENT-AJFR_APP-dev-tst-sns-s3event
+#      TopicName: ajfr-scraping-dev-sns-s3event
 #      FifoTopic: false
 #      Subscription:
 #      - Endpoint: AJFR_SNS_EMAIL_LIST_SUBSCRIPTION
@@ -36,21 +36,21 @@ Resources:
 #      
 #      Tags:
 #        - Key: Ent
-#          Value: AJFR_ENT     
+#          Value: ajfr     
 #        - Key: App
-#          Value: AJFR_APP
+#          Value: scraping
 #        - Key: Env
-#          Value: dev-tst
+#          Value: dev
 #
   ## 
   ## Create the S3 Data App Bucket 
   ##  
   DataAppS3bucket:
     Condition: CreateResources
-    DependsOn: AppSNSTopic
+#    DependsOn: AppSNSTopic
     Type: AWS::S3::Bucket 
     Properties: 
-      BucketName: AJFR_ENT-AJFR_APPAJFR_DATA_APP_S3_PREFIX-AJFR_DATA_APP_S3_BUCKETAJFR_DATA_APP_S3_POSTFIX
+      BucketName: ajfr-scraping-dev-storage
       PublicAccessBlockConfiguration:
         RestrictPublicBuckets: true
         BlockPublicAcls: true
@@ -67,11 +67,11 @@ Resources:
       #               Value: AJFR_DATA_APP_S3_SNS_FILTER_PATH
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
 
   # BucketToSNSPermission:
   #   Type: AWS::SNS::TopicPolicy
@@ -96,7 +96,7 @@ Resources:
   SamDeployS3bucket:
     Type: AWS::S3::Bucket 
     Properties: 
-      BucketName: AJFR_ENT-AJFR_APP-dev-tst-sam-deploy
+      BucketName: ajfr-scraping-dev-sam-deploy
       PublicAccessBlockConfiguration:
         RestrictPublicBuckets: true
         BlockPublicAcls: true
@@ -104,11 +104,11 @@ Resources:
         IgnorePublicAcls: true
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
 
   ##
   ## Create Dynamo Tables
@@ -117,7 +117,7 @@ Resources:
   TableTemporaryPayments:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: AJFR_DYNAMODB_TABLE_NAME_PREFIXAJFR_DYNAMODB_TABLE_NAME_TEMPORARYPAYMENTS
+      TableName: ajfr-scraping-dev-TemporaryPayments
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: organization_code
@@ -133,17 +133,17 @@ Resources:
         StreamViewType: NEW_IMAGE
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
 
   TableSuccessfulInvoice:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
-      TableName: AJFR_DYNAMODB_TABLE_NAME_PREFIXAJFR_DYNAMODB_TABLE_NAME_SUCCESSFULINVOICE
+      TableName: ajfr-scraping-dev-SuccessfulInvoice
       AttributeDefinitions:
         - AttributeName: period
           AttributeType: N
@@ -158,11 +158,11 @@ Resources:
         StreamViewType: NEW_IMAGE
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
 
   ##
   ## Create Sqs Queue
@@ -171,7 +171,7 @@ Resources:
 #    Type: AWS::SQS::Queue
 #    Properties:
 #      FifoQueue: true 
-#      QueueName: AJFR_ENT-AJFR_APP-dev-tst-AJFR_SQS_SEND_PAYMENTS
+#      QueueName: ajfr-scraping-dev-AJFR_SQS_SEND_PAYMENTS
 #      VisibilityTimeout: 300
 #      ContentBasedDeduplication: true
 #
@@ -179,7 +179,7 @@ Resources:
 #    Type: AWS::SQS::Queue
 #    Properties:
 #      FifoQueue: true 
-#      QueueName: AJFR_ENT-AJFR_APP-dev-tst-AJFR_SQS_PAYMENTS_TIMEOUT
+#      QueueName: ajfr-scraping-dev-AJFR_SQS_PAYMENTS_TIMEOUT
 #      VisibilityTimeout: 300
 #      ContentBasedDeduplication: true
 
@@ -187,7 +187,7 @@ Resources:
   InvoiceEmiterData:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /AJFR_ENT-AJFR_APP-dev-tst/InvoiceEmiter
+      Name: /ajfr-scraping-dev/InvoiceEmiter
       Type: String
       Description: SSM Parameter for invoice emiter data.
       Value: 
@@ -207,16 +207,16 @@ Resources:
 #  SumologicSecret:
 #    Type: 'AWS::SecretsManager::Secret'
 #    Properties:
-#      Name: AJFR_ENT-AJFR_APP-dev-tst-secret-sumologic
+#      Name: ajfr-scraping-dev-secret-sumologic
 #      Description: Sumo Logic Secret
 #      SecretString: !Sub '{"host":"AJFR_SUMOLOGIC_HOST","path":"AJFR_SUMOLOGIC_PATH"}'
 #      Tags:
 #        - Key: Ent
-#          Value: AJFR_ENT     
+#          Value: ajfr     
 #        - Key: App
-#          Value: AJFR_APP
+#          Value: scraping
 #        - Key: Env
-#          Value: dev-tst
+#          Value: dev
 
 ##
 ## ODS Secret
@@ -225,7 +225,7 @@ Resources:
 #  OdsSecret:
 #    Type: 'AWS::SecretsManager::Secret'
 #    Properties:
-#      Name: AJFR_ENT-AJFR_APP-dev-tst-secret-ods
+#      Name: ajfr-scraping-dev-secret-ods
 #      Description: Ods Secret
 #      SecretString: 
 #        !Sub | 
@@ -235,11 +235,11 @@ Resources:
 #            }
 #      Tags:
 #        - Key: Ent
-#          Value: AJFR_ENT     
+#          Value: ajfr     
 #        - Key: App
-#          Value: AJFR_APP
+#          Value: scraping
 #        - Key: Env
-#          Value: dev-tst
+#          Value: dev
 
   #
   # Create Role for state machine invocation from CloudWatch Rule
@@ -248,7 +248,7 @@ Resources:
 #  ScheduledEventRole:
 #    Type: AWS::IAM::Role
 #    Properties:
-#      RoleName: AJFR_ENT-AJFR_APP-dev-tst-scheduled-event-role
+#      RoleName: ajfr-scraping-dev-scheduled-event-role
 #      AssumeRolePolicyDocument:
 #        Version: "2012-10-17"
 #        Statement:
@@ -268,14 +268,14 @@ Resources:
 #              -
 #                Effect: "Allow"
 #                Action: "states:StartExecution"
-#                Resource: !Sub arn:aws:states:*:*:stateMachine:AJFR_ENT-AJFR_APP-dev-tst-*
+#                Resource: !Sub arn:aws:states:*:*:stateMachine:ajfr-scraping-dev-*
 #      Tags:
 #        - Key: Ent
-#          Value: AJFR_ENT     
+#          Value: ajfr     
 #        - Key: App
-#          Value: AJFR_APP
+#          Value: scraping
 #        - Key: Env
-#          Value: dev-tst
+#          Value: dev
 
 ##
 ## Navitarie Secret
@@ -287,7 +287,7 @@ Resources:
   RuntimeLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: AJFR_ENT-AJFR_APP-dev-tst-lambda-runtime-role
+      RoleName: ajfr-scraping-dev-lambda-runtime-role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -298,25 +298,25 @@ Resources:
                 - "states.amazonaws.com"
                 - "lambda.amazonaws.com"
       Policies:
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-secrets-policy
+        - PolicyName: ajfr-scraping-dev-lambda-secrets-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
                   - "secretsmanager:GetSecretValue"
-                Resource: !Sub "arn:aws:secretsmanager:*:*:secret:AJFR_ENT-AJFR_APP-dev-tst-secret-*"
+                Resource: !Sub "arn:aws:secretsmanager:*:*:secret:ajfr-scraping-dev-secret-*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-sfn-policy
+        - PolicyName: ajfr-scraping-dev-lambda-sfn-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
                   - "states:StartExecution"
-                Resource: !Sub "arn:aws:states:*:*:stateMachine:AJFR_ENT-AJFR_APP-dev-tst-sm-*"
+                Resource: !Sub "arn:aws:states:*:*:stateMachine:ajfr-scraping-dev-sm-*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-cloudwatch-policy
+        - PolicyName: ajfr-scraping-dev-lambda-cloudwatch-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -332,7 +332,7 @@ Resources:
                   - "cloudwatch:GetMetricData"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-datapipe-policy
+        - PolicyName: ajfr-scraping-dev-lambda-datapipe-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -349,7 +349,7 @@ Resources:
                   - "datapipeline:QueryObjects"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-codepipe-policy
+        - PolicyName: ajfr-scraping-dev-lambda-codepipe-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -359,7 +359,7 @@ Resources:
                   - "codepipeline:PutJobFailureResult"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-codebuild-policy
+        - PolicyName: ajfr-scraping-dev-lambda-codebuild-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -369,7 +369,7 @@ Resources:
                   - "codebuild:*"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-lambda-policy
+        - PolicyName: ajfr-scraping-dev-lambda-lambda-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -385,7 +385,7 @@ Resources:
                   - 'lambda:InvokeFunction'
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-resource-groups-policy
+        - PolicyName: ajfr-scraping-dev-lambda-resource-groups-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -399,7 +399,7 @@ Resources:
                   - "resource-groups:CreateGroup"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-kinesis-policy
+        - PolicyName: ajfr-scraping-dev-lambda-kinesis-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -410,7 +410,7 @@ Resources:
                   - "kinesis:DescribeStreamSummary"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-s3-policy
+        - PolicyName: ajfr-scraping-dev-lambda-s3-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -422,7 +422,7 @@ Resources:
                   - "s3:CreateBucket"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-app-autoscaling-policy
+        - PolicyName: ajfr-scraping-dev-lambda-app-autoscaling-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -437,7 +437,7 @@ Resources:
                   - "application-autoscaling:RegisterScalableTarget"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-dax-policy
+        - PolicyName: ajfr-scraping-dev-lambda-dax-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -446,7 +446,7 @@ Resources:
                   - "dax:*"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-kms-policy
+        - PolicyName: ajfr-scraping-dev-lambda-kms-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -456,7 +456,7 @@ Resources:
                   - "kms:ListAliases"
                 Resource: "*"
 #
-#        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-sns-policy
+#        - PolicyName: ajfr-scraping-dev-lambda-sns-policy
 #          PolicyDocument:
 #            Version: "2012-10-17"
 #            Statement:
@@ -473,7 +473,7 @@ Resources:
 #                  - "SNS:Publish"
 #                Resource: "*"
 #
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-sqs-policy
+        - PolicyName: ajfr-scraping-dev-lambda-sqs-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -488,7 +488,7 @@ Resources:
                   - 'sqs:ReceiveMessage'
                 Resource: "*"
 
-#        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-ssm-policy
+#        - PolicyName: ajfr-scraping-dev-lambda-ssm-policy
 #          PolicyDocument:
 #            Version: "2012-10-17"
 #            Statement:
@@ -499,7 +499,7 @@ Resources:
 #                  - 'ssm:AddTagsToResource'
 #                Resource: "*"
 #
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-dynamo-policy
+        - PolicyName: ajfr-scraping-dev-lambda-dynamo-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -515,7 +515,7 @@ Resources:
                   - "dynamodb:GetShardIterator"
                   - "dynamodb:ListStreams"
                 Resource: "*"
-        # - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-rds-policy
+        # - PolicyName: ajfr-scraping-dev-lambda-rds-policy
         #   PolicyDocument:
         #     Version: "2012-10-17"
         #     Statement:
@@ -524,7 +524,7 @@ Resources:
         #           - 'rds-data:ExecuteStatement'
         #         Resource: AJFR_MYSQL_ARN
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-cloudformation-policy
+        - PolicyName: ajfr-scraping-dev-lambda-cloudformation-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -546,7 +546,7 @@ Resources:
                   - "cloudformation:GetTemplateSummary"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-ec2-policy
+        - PolicyName: ajfr-scraping-dev-lambda-ec2-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -570,7 +570,7 @@ Resources:
                       - !Sub arn:aws:ec2:us-east-2:${AWS::AccountId}:subnet/*
                     ec2:AuthorizedService: "codebuild.amazonaws.com"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-logs-policy
+        - PolicyName: ajfr-scraping-dev-lambda-logs-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -581,7 +581,7 @@ Resources:
                   - "logs:PutLogEvents"
                 Resource: "*"
 
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-iam-policy
+        - PolicyName: ajfr-scraping-dev-lambda-iam-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -594,7 +594,7 @@ Resources:
                   - "iam:GetRole"
                 Resource: "*"  
       
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-lambda-tag-policy
+        - PolicyName: ajfr-scraping-dev-lambda-tag-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -604,11 +604,11 @@ Resources:
                 Resource: "*"                
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
 
   ## 
   ## Create the Pipeline Role
@@ -616,7 +616,7 @@ Resources:
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: AJFR_ENT-AJFR_APP-dev-tst-pipeline-role
+      RoleName: ajfr-scraping-dev-pipeline-role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -627,7 +627,7 @@ Resources:
                 - codebuild.amazonaws.com
                 - codepipeline.amazonaws.com
       Policies:
-        - PolicyName: AJFR_ENT-AJFR_APP-dev-tst-pipeline-Policies
+        - PolicyName: ajfr-scraping-dev-pipeline-Policies
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -735,11 +735,11 @@ Resources:
                     ec2:AuthorizedService: "codebuild.amazonaws.com"
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
 
   ##
   ## Crete The Pipeline 
@@ -747,7 +747,7 @@ Resources:
   AutomatedPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: AJFR_ENT-AJFR_APP-dev-tst-pipeline
+      Name: ajfr-scraping-dev-pipeline
       ArtifactStore:
         Type: S3
         Location: !Ref SamDeployS3bucket
@@ -763,12 +763,12 @@ Resources:
                 Provider: GitHub
               Configuration:
                 PollForSourceChanges: true
-                Owner: AJFR_GIT_ORGANIZATION
-                Repo: AJFR_GIT_REPOSITORY
-                Branch: dev-tst
+                Owner: automatizacionaf
+                Repo: automatizaacion
+                Branch: dev
                 OAuthToken: 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
               OutputArtifacts:
-                - Name: AJFR_ENT-AJFR_APP-dev-tst-checkout-artifact
+                - Name: ajfr-scraping-dev-checkout-artifact
               RunOrder: 1
         - Name: Build
           Actions:
@@ -782,16 +782,16 @@ Resources:
                 ProjectName: !Ref AutomatedBuildProject
               RunOrder: 1
               InputArtifacts:
-                - Name: AJFR_ENT-AJFR_APP-dev-tst-checkout-artifact
+                - Name: ajfr-scraping-dev-checkout-artifact
               OutputArtifacts:
                 - Name: BuildOutput
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
 
   #
   # Create de Build Project for Pipeline
@@ -800,7 +800,7 @@ Resources:
   AutomatedBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: AJFR_ENT-AJFR_APP-dev-tst-build-project
+      Name: ajfr-scraping-dev-build-project
       Artifacts:
         Type: CODEPIPELINE
       Environment:
@@ -813,29 +813,29 @@ Resources:
           # Wrong : BUILD_APP and BUILD_APP_XXXX 
           #
           - Name: BUILD_ENT
-            Value: AJFR_ENT  
+            Value: ajfr  
           - Name: BUILD_APP
-            Value: AJFR_APP
+            Value: scraping
           - Name: BUILD_ENV
-            Value: dev-tst
+            Value: dev
           - Name: BUILD_ACCOUNT
             Value: !Ref AWS::AccountId
           - Name: BUILD_REGION
             Value: !Ref AWS::Region
           - Name: FORCE_DELETE_DEPLOYMMENT_STACK
-            Value: AJFR_FORCE_DELETE_DEPLOYMMENT_STACK
+            Value: FALSE
           - Name: BUILD_RUNTIME_LAMBDA_ROLE
             Value: !GetAtt RuntimeLambdaRole.Arn
           - Name: BUILD_DEPLOYMENT_S3_BUCKET
             Value: !Ref SamDeployS3bucket
-          - Name: BUILD_SCHEDULE_SF_EVENT_ROLE
-            Value: !GetAtt ScheduledEventRole.Arn
+#          - Name: BUILD_SCHEDULE_SF_EVENT_ROLE
+#            Value: !GetAtt ScheduledEventRole.Arn
           - Name: BUILD_DATA_APP_S3_BUCKET
             Value: !Ref DataAppS3bucket
           
           ## S3 EVENT TO SNS FILTER PATH
-          - Name: BUILD_DATA_APP_S3_SNS_FILTER_PATH
-            Value: AJFR_DATA_APP_S3_SNS_FILTER_PATH
+#          - Name: BUILD_DATA_APP_S3_SNS_FILTER_PATH
+#            Value: AJFR_DATA_APP_S3_SNS_FILTER_PATH
 
           #### TABLAS DYNAMO
           - Name: BUILD_DYNAMO_TEMPORAY_PAYMENTS
@@ -889,8 +889,8 @@ Resources:
         BuildSpec: buildspect.yml
       Tags:
         - Key: Ent
-          Value: AJFR_ENT     
+          Value: ajfr     
         - Key: App
-          Value: AJFR_APP
+          Value: scraping
         - Key: Env
-          Value: dev-tst
+          Value: dev
